@@ -1,0 +1,20 @@
+plugins {
+  id 'java'
+}
+
+group 'com.wirecard'
+version '1.0'
+
+sourceCompatibility = 1.8
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  compile group: 'org.projectlombok', name: 'lombok', version: '1.18.0'
+  compile group: 'com.typesafe.akka', name: 'akka-actor_2.12', version: '2.5.13'
+
+  testCompile 'com.typesafe.akka:akka-testkit_2.12:2.5.13'
+  testCompile group: 'junit', name: 'junit', version: '4.12'
+}

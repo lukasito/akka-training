@@ -1,22 +1,27 @@
 plugins {
   id 'java'
+  id 'application'
+  id "net.ltgt.apt" version "0.18"
 }
 
 group 'com.wirecard'
 version '1.0'
 
 sourceCompatibility = 1.8
+mainClassName = "com.wirecard.akkatraining.application.Main"
 
 repositories {
   mavenCentral()
 }
 
 dependencies {
-  compile group: 'org.projectlombok', name: 'lombok', version: '1.18.0'
   compile "com.typesafe.akka:akka-actor_2.12:$akkaVersion"
 
   testCompile "com.typesafe.akka:akka-testkit_2.12:$akkaVersion"
   testCompile group: 'junit', name: 'junit', version: '4.12'
+
+  compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.2'
+  annotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.2'
 }
 
 wrapper {

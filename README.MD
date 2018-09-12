@@ -8,7 +8,7 @@ File ->
         Annotation processors: Enable annotation processing
 ```
 
-#Running
+# Running
 ```
 gradlew run
 ```

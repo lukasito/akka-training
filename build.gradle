@@ -13,8 +13,12 @@ repositories {
 
 dependencies {
   compile group: 'org.projectlombok', name: 'lombok', version: '1.18.0'
-  compile group: 'com.typesafe.akka', name: 'akka-actor_2.12', version: '2.5.13'
+  compile "com.typesafe.akka:akka-actor_2.12:$akkaVersion"
 
-  testCompile 'com.typesafe.akka:akka-testkit_2.12:2.5.13'
+  testCompile "com.typesafe.akka:akka-testkit_2.12:$akkaVersion"
   testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+wrapper {
+  gradleVersion = "4.10"
 }

@@ -2,14 +2,15 @@ package com.wirecard.akkatraining.domain;
 
 import akka.actor.ActorRef;
 import akka.testkit.javadsl.TestKit;
-import com.wirecard.akkatraining.domain.AccountProtocol.AccountOverview;
-import com.wirecard.akkatraining.domain.AccountProtocol.CancelTransfer;
-import com.wirecard.akkatraining.domain.AccountProtocol.CompleteTransfer;
-import com.wirecard.akkatraining.domain.AccountProtocol.GetAccountOverview;
-import com.wirecard.akkatraining.domain.AccountProtocol.InitiateTransfer;
-import com.wirecard.akkatraining.domain.AccountProtocol.TransferCancelled;
-import com.wirecard.akkatraining.domain.AccountProtocol.TransferCompleted;
-import com.wirecard.akkatraining.domain.AccountProtocol.TransferInitiated;
+import com.wirecard.akkatraining.domain.account.AccountId;
+import com.wirecard.akkatraining.domain.account.AccountProtocol.AccountOverview;
+import com.wirecard.akkatraining.domain.account.AccountProtocol.CancelTransfer;
+import com.wirecard.akkatraining.domain.account.AccountProtocol.Debit;
+import com.wirecard.akkatraining.domain.account.AccountProtocol.GetAccountOverview;
+import com.wirecard.akkatraining.domain.account.AccountProtocol.TransferMoney;
+import com.wirecard.akkatraining.domain.account.AccountProtocol.TransferCancelled;
+import com.wirecard.akkatraining.domain.account.AccountProtocol.TransferCompleted;
+import com.wirecard.akkatraining.domain.account.AccountProtocol.TransferInitiated;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -22,11 +23,11 @@ public class AccountTest extends AbstractActorSystemTest {
   public void thatTransferCanBeInitiated() {
     TestKit probe = new TestKit(system());
 
-    AccountNumber debtor = AccountNumber.of("Account-123456");
-    AccountNumber creditor = AccountNumber.of("Account-23133");
+    AccountId debtor = AccountId.of("Account-123456");
+    AccountId creditor = AccountId.of("Account-23133");
     ActorRef account = system().actorOf(Account.props(BigDecimal.TEN, debtor), debtor.value());
 
-    account.tell(new InitiateTransfer(creditor, BigDecimal.ONE), probe.getRef());
+    account.tell(new TransferMoney(creditor, BigDecimal.ONE), probe.getRef());
     probe.expectMsgClass(TransferInitiated.class);
 
     account.tell(GetAccountOverview.instance(), probe.getRef());
@@ -37,11 +38,11 @@ public class AccountTest extends AbstractActorSystemTest {
   public void thatTransferCanBeCanceled() {
     TestKit probe = new TestKit(system());
 
-    AccountNumber debtor = AccountNumber.of("Account-123456");
-    AccountNumber creditor = AccountNumber.of("Account-23133");
+    AccountId debtor = AccountId.of("Account-123456");
+    AccountId creditor = AccountId.of("Account-23133");
     ActorRef account = system().actorOf(Account.props(BigDecimal.TEN, debtor), debtor.value());
 
-    account.tell(new InitiateTransfer(creditor, BigDecimal.ONE), probe.getRef());
+    account.tell(new TransferMoney(creditor, BigDecimal.ONE), probe.getRef());
     TransferInitiated transferInitiated = probe.expectMsgClass(TransferInitiated.class);
 
     account.tell(new CancelTransfer(transferInitiated.transferId()), probe.getRef());
@@ -55,14 +56,14 @@ public class AccountTest extends AbstractActorSystemTest {
   public void thatTransferCanBeCompleted() {
     TestKit probe = new TestKit(system());
 
-    AccountNumber debtor = AccountNumber.of("Account-123456");
-    AccountNumber creditor = AccountNumber.of("Account-23133");
+    AccountId debtor = AccountId.of("Account-123456");
+    AccountId creditor = AccountId.of("Account-23133");
     ActorRef account = system().actorOf(Account.props(BigDecimal.TEN, debtor), debtor.value());
 
-    account.tell(new InitiateTransfer(creditor, BigDecimal.ONE), probe.getRef());
+    account.tell(new TransferMoney(creditor, BigDecimal.ONE), probe.getRef());
     TransferInitiated transferInitiated = probe.expectMsgClass(TransferInitiated.class);
 
-    account.tell(new CompleteTransfer(transferInitiated.transferId()), probe.getRef());
+    account.tell(new Debit(transferInitiated.transferId()), probe.getRef());
     probe.expectMsgClass(TransferCompleted.class);
 
     account.tell(GetAccountOverview.instance(), probe.getRef());

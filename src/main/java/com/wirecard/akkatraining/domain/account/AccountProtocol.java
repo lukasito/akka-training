@@ -1,5 +1,6 @@
-package com.wirecard.akkatraining.domain;
+package com.wirecard.akkatraining.domain.account;
 
+import com.wirecard.akkatraining.domain.transfer.TransferId;
 import lombok.Value;
 
 import java.math.BigDecimal;
@@ -17,8 +18,21 @@ public interface AccountProtocol {
   }
 
   @Value
-  class CompleteTransfer implements Command {
+  class AllocateMoney implements Command {
     TransferId transferId;
+    AccountId creditor;
+    BigDecimal amount;
+  }
+
+  @Value
+  class Debit implements Command {
+    TransferId transferId;
+  }
+
+  @Value
+  class Credit implements Command {
+    TransferId transferId;
+    BigDecimal amount;
   }
 
   @Value
@@ -27,8 +41,8 @@ public interface AccountProtocol {
   }
 
   @Value
-  class InitiateTransfer implements Command {
-    AccountNumber creditor;
+  class TransferMoney implements Command {
+    AccountId creditor;
     BigDecimal amount;
   }
 
@@ -39,26 +53,35 @@ public interface AccountProtocol {
   }
 
   @Value
-  class TransferInitiated implements Event {
+  class MoneyAllocated implements Event {
     TransferId transferId;
-    AccountNumber debtor;
-    AccountNumber creditor;
+    AccountId debtor;
     BigDecimal amount;
   }
 
   @Value
-  class TransferCompleted implements Event {
+  class DebitSuccessful implements Event {
     TransferId transferId;
+    AccountId debtor;
   }
 
   @Value
-  class TransferCancelled implements Event {
+  class DebitFailed implements Event {
     TransferId transferId;
+    String reason;
   }
 
   @Value
-  class TransferCancellationFailed implements CommandRejection {
+  class CreditSuccessful implements Event {
     TransferId transferId;
+    AccountId creditor;
+  }
+
+  @Value
+  class MoneyAllocationFailed implements CommandRejection {
+    TransferId transferId;
+    AccountId debtor;
+    String reason;
   }
 
   @Value

@@ -2,8 +2,13 @@ package com.wirecard.akkatraining.domain;
 
 import lombok.Value;
 
-@Value(staticConstructor = "of")
-public class TransferId {
+import java.util.UUID;
 
+@Value
+public class TransferId {
   String value;
+
+  public static TransferId newId() {
+    return new TransferId(UUID.randomUUID().toString());
+  }
 }

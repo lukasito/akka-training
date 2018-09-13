@@ -16,9 +16,12 @@ repositories {
 
 dependencies {
   compile "com.typesafe.akka:akka-actor_2.12:$akkaVersion"
+  compile 'ch.qos.logback:logback-classic:1.2.3'
+  compile group: 'com.typesafe.akka', name: 'akka-slf4j_2.12', version: '2.5.16'
 
   testCompile "com.typesafe.akka:akka-testkit_2.12:$akkaVersion"
   testCompile group: 'junit', name: 'junit', version: '4.12'
+  testCompile group: 'org.assertj', name: 'assertj-core', version: '3.9.1'
 
   compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.2'
   annotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.2'

@@ -42,20 +42,27 @@ public interface AccountProtocol {
   }
 
   @Value
+  class Initialized implements Event {
+    AccountId accountId;
+    BigDecimal balance;
+    BigDecimal allocatedBalance;
+  }
+
+  @Value
   class MoneyAllocated implements Event {
     TransferId transferId;
     AccountId debtor;
+    AccountId creditor;
     BigDecimal amount;
   }
 
   @Value
   class DebitSuccessful implements Event {
-    TransferId transferId;
-    AccountId debtor;
+    PendingTransfer pendingTransfer;
   }
 
   @Value
-  class DebitFailed implements Event {
+  class DebitFailed implements CommandRejection {
     TransferId transferId;
     String reason;
   }
@@ -63,6 +70,7 @@ public interface AccountProtocol {
   @Value
   class CreditSuccessful implements Event {
     TransferId transferId;
+    BigDecimal amount;
     AccountId creditor;
   }
 

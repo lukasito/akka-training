@@ -54,6 +54,7 @@ public class Account extends AbstractLoggingActor {
     balance = initialize.balance();
     allocatedBalance = initialize.allocatedBalance();
     getContext().become(ready());
+    notify(new AccountProtocol.Initialized(accountId, balance, allocatedBalance));
   }
 
   private void accept(AllocateMoney allocateMoney) {
@@ -62,7 +63,7 @@ public class Account extends AbstractLoggingActor {
     if (availableBalance().compareTo(amount) >= 0) {
       allocateMoney(amount);
       transfers.add(new PendingTransfer(transferId, amount, allocateMoney.creditor()));
-      notify(new MoneyAllocated(transferId, accountId, amount));
+      notify(new MoneyAllocated(transferId, accountId, allocateMoney.creditor(), amount));
       log().info("Current state {}", createOverview());
     } else {
       notify(new MoneyAllocationFailed(transferId, accountId, "Not enough balance!"));
@@ -79,20 +80,20 @@ public class Account extends AbstractLoggingActor {
 
   private void accept(Credit credit) {
     balance = balance.add(credit.amount());
-    notify(new CreditSuccessful(credit.transferId(), accountId));
+    notify(new CreditSuccessful(credit.transferId(), credit.amount(), accountId));
   }
 
   private void accept(Debit debit) {
-    AccountProtocol.Event event = transfers.stream().filter(transfer -> transfer.id().equals(debit.transferId()))
+    Object result = transfers.stream().filter(transfer -> transfer.id().equals(debit.transferId()))
       .findFirst()
       .map(transfer -> {
         transfers.remove(transfer);
         chargeMoney(transfer.amount());
-        return (AccountProtocol.Event) new DebitSuccessful(debit.transferId(), accountId);
+        return (Object) new DebitSuccessful(transfer);
       })
       .orElseGet(() -> new DebitFailed(debit.transferId(), "No allocated money for such transfer"));
 
-    notify(event);
+    notify(result);
   }
 
   private void allocateMoney(BigDecimal amount) {

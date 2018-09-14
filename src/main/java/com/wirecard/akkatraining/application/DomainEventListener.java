@@ -15,6 +15,7 @@ public class DomainEventListener extends AbstractLoggingActor {
   private DomainEventListener() {
     context().system().eventStream().subscribe(self(), TransferProtocol.Event.class);
     context().system().eventStream().subscribe(self(), AccountProtocol.Event.class);
+    context().system().eventStream().subscribe(self(), AccountProtocol.CommandRejection.class);
   }
 
   @Override

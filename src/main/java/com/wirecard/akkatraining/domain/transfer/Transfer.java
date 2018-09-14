@@ -82,11 +82,14 @@ public class Transfer extends AbstractLoggingActor {
       new Forward(debtor, new AccountProtocol.Debit(transferId())),
       self()
     );
+
+    log().info("Money allocated status: {}", status);
   }
 
   private void accept(AccountProtocol.MoneyAllocationFailed moneyAllocationFailed) {
     status = Status.FAILED;
     notifyRequester(new TransferFailed(transferId(), debtor, creditor, amount, moneyAllocationFailed.reason()));
+    log().info("Money allocation failed, status: {}", status);
   }
 
   private void accept(AccountProtocol.CreditSuccessful creditSuccessful) {
@@ -96,6 +99,7 @@ public class Transfer extends AbstractLoggingActor {
     } else {
       this.creditCompleted = true;
     }
+    log().info("Credit successful, status: {}", status);
   }
 
   private void accept(AccountProtocol.DebitSuccessful debitSuccessful) {
@@ -105,6 +109,7 @@ public class Transfer extends AbstractLoggingActor {
     } else {
       this.debitCompleted = true;
     }
+    log().info("Debit successful, status: {}", status);
   }
 
   private TransferId transferId() {

@@ -2,11 +2,20 @@ package com.wirecard.akkatraining.domain.account;
 
 import lombok.Value;
 
+import java.math.BigDecimal;
+
 public interface AccountRepositoryProtocol {
 
   @Value
   class Forward {
     AccountId accountId;
-    AccountProtocol.Command command;
+    Object command;
+  }
+
+  @Value
+  class Save {
+    AccountId accountId;
+    BigDecimal balance;
+    BigDecimal allocatedBalance;
   }
 }

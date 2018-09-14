@@ -8,13 +8,19 @@ import java.math.BigDecimal;
 public interface AccountProtocol {
 
   interface Command {
-
   }
 
   interface Event {
   }
 
   interface CommandRejection {
+  }
+
+  @Value
+  class Initialize {
+    AccountId accountId;
+    BigDecimal balance;
+    BigDecimal allocatedBalance;
   }
 
   @Value
@@ -33,23 +39,6 @@ public interface AccountProtocol {
   class Credit implements Command {
     TransferId transferId;
     BigDecimal amount;
-  }
-
-  @Value
-  class CancelTransfer implements Command {
-    TransferId transferId;
-  }
-
-  @Value
-  class TransferMoney implements Command {
-    AccountId creditor;
-    BigDecimal amount;
-  }
-
-  @Value
-  class TransferInitiationFailed implements CommandRejection {
-    BigDecimal amount;
-    String reason;
   }
 
   @Value
@@ -96,7 +85,7 @@ public interface AccountProtocol {
   @Value
   class AccountOverview {
     BigDecimal balance;
-    BigDecimal blockedMoney;
+    BigDecimal allocatedBalance;
     Integer pendingTransfers;
   }
 }

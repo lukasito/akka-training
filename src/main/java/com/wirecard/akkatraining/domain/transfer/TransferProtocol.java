@@ -7,11 +7,14 @@ import java.math.BigDecimal;
 
 public interface TransferProtocol {
 
+  interface Command {
+  }
+
   interface Event {
   }
 
   @Value
-  class ExecuteTransfer {
+  class ExecuteTransfer implements Command {
     BigDecimal amount;
     AccountId creditor;
     AccountId debtor;
@@ -28,6 +31,9 @@ public interface TransferProtocol {
   @Value
   class TransferCompleted implements Event {
     TransferId transferId;
+    AccountId debtor;
+    AccountId creditor;
+    BigDecimal amount;
   }
 
   @Value

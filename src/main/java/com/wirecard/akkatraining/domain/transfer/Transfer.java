@@ -8,12 +8,14 @@ import com.wirecard.akkatraining.domain.account.AccountId;
 import com.wirecard.akkatraining.domain.account.AccountProtocol;
 import com.wirecard.akkatraining.domain.account.AccountRepositoryProtocol.Forward;
 import com.wirecard.akkatraining.domain.transfer.TransferProtocol.ExecuteTransfer;
+import com.wirecard.akkatraining.domain.transfer.TransferProtocol.TransferCompleted;
 import com.wirecard.akkatraining.domain.transfer.TransferProtocol.TransferFailed;
 
 import java.math.BigDecimal;
 
 public class Transfer extends AbstractLoggingActor {
 
+  private ActorRef requester;
   private BigDecimal amount;
   private AccountId creditor;
   private AccountId debtor;
@@ -24,12 +26,6 @@ public class Transfer extends AbstractLoggingActor {
 
   private Transfer(ActorRef accountRepository) {
     this.accountRepository = accountRepository;
-    subscribe(
-      AccountProtocol.CreditSuccessful.class,
-      AccountProtocol.DebitSuccessful.class,
-      AccountProtocol.MoneyAllocated.class,
-      AccountProtocol.MoneyAllocationFailed.class
-    );
   }
 
   public static Props props(ActorRef accountRepository) {
@@ -62,13 +58,14 @@ public class Transfer extends AbstractLoggingActor {
     this.creditor = executeTransfer.creditor();
     this.debtor = executeTransfer.debtor();
     this.status = Status.IN_PROGRESS;
+    requester = sender();
 
     getContext().become(transferInitiated());
     accountRepository.tell(new Forward(
       debtor, new AccountProtocol.AllocateMoney(transferId(), creditor, amount)
     ), self());
 
-    publish(
+    notifyRequester(
       new TransferProtocol.TransferInitiated(
         new TransferId(self().path().name()),
         debtor, creditor, amount));
@@ -89,13 +86,13 @@ public class Transfer extends AbstractLoggingActor {
 
   private void accept(AccountProtocol.MoneyAllocationFailed moneyAllocationFailed) {
     status = Status.FAILED;
-    publish(new TransferFailed(transferId(), debtor, creditor, amount, moneyAllocationFailed.reason()));
+    notifyRequester(new TransferFailed(transferId(), debtor, creditor, amount, moneyAllocationFailed.reason()));
   }
 
   private void accept(AccountProtocol.CreditSuccessful creditSuccessful) {
     if (debitCompleted) {
       status = Status.SUCCESS;
-      publish(new TransferProtocol.TransferCompleted(transferId()));
+      notifyRequester(new TransferCompleted(transferId(), debtor, creditor, amount));
     } else {
       this.creditCompleted = true;
     }
@@ -104,7 +101,7 @@ public class Transfer extends AbstractLoggingActor {
   private void accept(AccountProtocol.DebitSuccessful debitSuccessful) {
     if (creditCompleted) {
       status = Status.SUCCESS;
-      publish(new TransferProtocol.TransferCompleted(transferId()));
+      notifyRequester(new TransferCompleted(transferId(), debtor, creditor, amount));
     } else {
       this.debitCompleted = true;
     }
@@ -114,13 +111,13 @@ public class Transfer extends AbstractLoggingActor {
     return new TransferId(self().path().name());
   }
 
-  private void publish(Object event) {
+  private void notify(Object event) {
     context().system().eventStream().publish(event);
+    sender().tell(event, self());
   }
 
-  private void subscribe(Class<?>... eventClasses) {
-    for (Class<?> klass : eventClasses) {
-      context().system().eventStream().subscribe(self(), klass);
-    }
+  private void notifyRequester(Object event) {
+    context().system().eventStream().publish(event);
+    requester.tell(event, self());
   }
 }

@@ -11,6 +11,7 @@ import com.wirecard.akkatraining.domain.account.AccountProtocol.Debit;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.DebitFailed;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.DebitSuccessful;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.GetAccountOverview;
+import com.wirecard.akkatraining.domain.account.AccountProtocol.Initialize;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.MoneyAllocated;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.MoneyAllocationFailed;
 import com.wirecard.akkatraining.domain.transfer.TransferId;
@@ -26,18 +27,19 @@ public class Account extends AbstractLoggingActor {
   private BigDecimal allocatedBalance;
   private final List<PendingTransfer> transfers = new ArrayList<>();
 
-  private Account(BigDecimal balance, AccountId accountId) {
-    this.balance = balance;
-    allocatedBalance = BigDecimal.ZERO;
-    this.accountId = accountId;
-  }
-
-  public static Props props(BigDecimal balance, AccountId accountId) {
-    return Props.create(Account.class, () -> new Account(balance, accountId));
+  public static Props props() {
+    return Props.create(Account.class, Account::new);
   }
 
   @Override
   public Receive createReceive() {
+    return ReceiveBuilder.create()
+      .match(Initialize.class, this::accept)
+      .matchAny(o -> log().error("Unknown message {}", o))
+      .build();
+  }
+
+  private Receive ready() {
     return ReceiveBuilder.create()
       .match(AllocateMoney.class, this::accept)
       .match(Credit.class, this::accept)
@@ -47,26 +49,37 @@ public class Account extends AbstractLoggingActor {
       .build();
   }
 
+  private void accept(Initialize initialize) {
+    accountId = initialize.accountId();
+    balance = initialize.balance();
+    allocatedBalance = initialize.allocatedBalance();
+    getContext().become(ready());
+  }
+
   private void accept(AllocateMoney allocateMoney) {
     BigDecimal amount = allocateMoney.amount();
     TransferId transferId = allocateMoney.transferId();
     if (availableBalance().compareTo(amount) >= 0) {
       allocateMoney(amount);
       transfers.add(new PendingTransfer(transferId, amount, allocateMoney.creditor()));
-      publish(new MoneyAllocated(transferId, accountId, amount));
+      notify(new MoneyAllocated(transferId, accountId, amount));
+      log().info("Current state {}", createOverview());
     } else {
-      publish(new MoneyAllocationFailed(transferId, accountId, "Not enough balance!"));
+      notify(new MoneyAllocationFailed(transferId, accountId, "Not enough balance!"));
     }
   }
 
   private void overview(GetAccountOverview o) {
-    AccountOverview overview = new AccountOverview(balance, allocatedBalance, transfers.size());
-    sender().tell(overview, self());
+    sender().tell(createOverview(), self());
+  }
+
+  private AccountOverview createOverview() {
+    return new AccountOverview(balance, allocatedBalance, transfers.size());
   }
 
   private void accept(Credit credit) {
     balance = balance.add(credit.amount());
-    publish(new CreditSuccessful(credit.transferId(), accountId));
+    notify(new CreditSuccessful(credit.transferId(), accountId));
   }
 
   private void accept(Debit debit) {
@@ -79,7 +92,7 @@ public class Account extends AbstractLoggingActor {
       })
       .orElseGet(() -> new DebitFailed(debit.transferId(), "No allocated money for such transfer"));
 
-    publish(event);
+    notify(event);
   }
 
   private void allocateMoney(BigDecimal amount) {
@@ -95,7 +108,8 @@ public class Account extends AbstractLoggingActor {
     balance = balance.subtract(amount);
   }
 
-  private void publish(Object event) {
+  private void notify(Object event) {
     context().system().eventStream().publish(event);
+    sender().tell(event, self());
   }
 }

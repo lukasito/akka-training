@@ -12,6 +12,11 @@ public abstract class AbstractActorSystemTest {
   @Before
   public void setUp() throws Exception {
     system = ActorSystem.create();
+    before();
+  }
+
+  protected void before() {
+    // nothing
   }
 
   @After

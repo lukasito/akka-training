@@ -1,8 +1,10 @@
 package com.wirecard.akkatraining.domain.account;
 
-import akka.actor.AbstractLoggingActor;
 import akka.actor.Props;
+import akka.event.Logging;
+import akka.event.LoggingAdapter;
 import akka.japi.pf.ReceiveBuilder;
+import akka.persistence.AbstractPersistentActor;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.AccountOverview;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.AllocateMoney;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.Credit;
@@ -12,6 +14,7 @@ import com.wirecard.akkatraining.domain.account.AccountProtocol.DebitFailed;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.DebitSuccessful;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.GetAccountOverview;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.Initialize;
+import com.wirecard.akkatraining.domain.account.AccountProtocol.Initialized;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.MoneyAllocated;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.MoneyAllocationFailed;
 import com.wirecard.akkatraining.domain.transfer.TransferId;
@@ -20,12 +23,13 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Account extends AbstractLoggingActor {
+public class Account extends AbstractPersistentActor {
 
   private AccountId accountId;
   private BigDecimal balance;
   private BigDecimal allocatedBalance;
   private final List<PendingTransfer> transfers = new ArrayList<>();
+  private final LoggingAdapter log = Logging.getLogger(context().system(), this);
 
   public static Props props() {
     return Props.create(Account.class, Account::new);
@@ -34,39 +38,61 @@ public class Account extends AbstractLoggingActor {
   @Override
   public Receive createReceive() {
     return ReceiveBuilder.create()
-      .match(Initialize.class, this::accept)
-      .matchAny(o -> log().error("Unknown message {}", o))
+      .match(Initialize.class, this::initialize)
+      .matchAny(o -> log.error("Unknown message {}", o))
       .build();
   }
 
   private Receive ready() {
     return ReceiveBuilder.create()
-      .match(AllocateMoney.class, this::accept)
-      .match(Credit.class, this::accept)
-      .match(Debit.class, this::accept)
+      .match(AllocateMoney.class, this::allocateMoney)
+      .match(Credit.class, this::credit)
+      .match(Debit.class, this::debit)
       .matchEquals(GetAccountOverview.instance(), this::overview)
-      .matchAny(o -> log().error("Unknown message {}", o))
+      .matchAny(o -> log.error("Unknown message {}", o))
       .build();
   }
 
-  private void accept(Initialize initialize) {
-    accountId = initialize.accountId();
-    balance = initialize.balance();
-    allocatedBalance = initialize.allocatedBalance();
-    getContext().become(ready());
+  private void initialize(Initialize initialize) {
+    Initialized event = new Initialized(
+      initialize.accountId(),
+      initialize.balance(),
+      initialize.allocatedBalance()
+    );
+    persist(event, this::accept);
   }
 
-  private void accept(AllocateMoney allocateMoney) {
+  private void allocateMoney(AllocateMoney allocateMoney) {
     BigDecimal amount = allocateMoney.amount();
     TransferId transferId = allocateMoney.transferId();
     if (availableBalance().compareTo(amount) >= 0) {
-      allocateMoney(amount);
-      transfers.add(new PendingTransfer(transferId, amount, allocateMoney.creditor()));
-      notify(new MoneyAllocated(transferId, accountId, amount));
-      log().info("Current state {}", createOverview());
+      MoneyAllocated event = new MoneyAllocated(transferId, accountId, allocateMoney.creditor(), amount);
+      persist(event, this::accept);
+      notify(event);
+      log.info("Current state {}", createOverview());
     } else {
+      // rejected
       notify(new MoneyAllocationFailed(transferId, accountId, "Not enough balance!"));
     }
+  }
+
+  private void credit(Credit credit) {
+    CreditSuccessful event = new CreditSuccessful(credit.transferId(), credit.amount(), accountId);
+    persist(event, this::accept);
+    notify(event);
+  }
+
+  private void debit(Debit debit) {
+    Object result = transfers.stream().filter(transfer -> transfer.id().equals(debit.transferId()))
+      .findFirst()
+      .map(transfer -> {
+        DebitSuccessful debitSuccessful = new DebitSuccessful(transfer);
+        persist(debitSuccessful, this::accept);
+        return (Object) debitSuccessful;
+      })
+      .orElseGet(() -> new DebitFailed(debit.transferId(), "No allocated money for such transfer"));
+
+    notify(result);
   }
 
   private void overview(GetAccountOverview o) {
@@ -77,23 +103,6 @@ public class Account extends AbstractLoggingActor {
     return new AccountOverview(balance, allocatedBalance, transfers.size());
   }
 
-  private void accept(Credit credit) {
-    balance = balance.add(credit.amount());
-    notify(new CreditSuccessful(credit.transferId(), accountId));
-  }
-
-  private void accept(Debit debit) {
-    AccountProtocol.Event event = transfers.stream().filter(transfer -> transfer.id().equals(debit.transferId()))
-      .findFirst()
-      .map(transfer -> {
-        transfers.remove(transfer);
-        chargeMoney(transfer.amount());
-        return (AccountProtocol.Event) new DebitSuccessful(debit.transferId(), accountId);
-      })
-      .orElseGet(() -> new DebitFailed(debit.transferId(), "No allocated money for such transfer"));
-
-    notify(event);
-  }
 
   private void allocateMoney(BigDecimal amount) {
     allocatedBalance = allocatedBalance.add(amount);
@@ -111,5 +120,45 @@ public class Account extends AbstractLoggingActor {
   private void notify(Object event) {
     context().system().eventStream().publish(event);
     sender().tell(event, self());
+  }
+
+  /*  PERSISTENCE & ES */
+
+  @Override
+  public String persistenceId() {
+    return accountId.value();
+  }
+
+  @Override
+  public Receive createReceiveRecover() {
+    return ReceiveBuilder.create()
+      .match(Initialized.class, this::accept)
+      .match(MoneyAllocated.class, this::accept)
+      .match(CreditSuccessful.class, this::accept)
+      .match(DebitSuccessful.class, this::accept)
+      .build();
+  }
+
+  private void accept(Initialized initialized) {
+    accountId = initialized.accountId();
+    balance = initialized.balance();
+    allocatedBalance = initialized.allocatedBalance();
+    getContext().become(ready());
+  }
+
+  private void accept(MoneyAllocated moneyAllocated) {
+    BigDecimal amount = moneyAllocated.amount();
+    allocateMoney(amount);
+    transfers.add(new PendingTransfer(moneyAllocated.transferId(), amount, moneyAllocated.creditor()));
+  }
+
+  private void accept(CreditSuccessful creditSuccessful) {
+    balance = balance.add(creditSuccessful.amount());
+  }
+
+  private void accept(DebitSuccessful debitSuccessful) {
+    PendingTransfer pendingTransfer = debitSuccessful.pendingTransfer();
+    transfers.remove(pendingTransfer);
+    chargeMoney(pendingTransfer.amount());
   }
 }

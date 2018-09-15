@@ -17,8 +17,7 @@ public interface AccountProtocol {
   }
 
   @Value
-  class Initialize {
-    AccountId accountId;
+  class Initialize implements Command {
     BigDecimal balance;
     BigDecimal allocatedBalance;
   }
@@ -43,7 +42,6 @@ public interface AccountProtocol {
 
   @Value
   class Initialized implements Event {
-    AccountId accountId;
     BigDecimal balance;
     BigDecimal allocatedBalance;
   }
@@ -62,16 +60,16 @@ public interface AccountProtocol {
   }
 
   @Value
-  class DebitFailed implements CommandRejection {
-    TransferId transferId;
-    String reason;
-  }
-
-  @Value
   class CreditSuccessful implements Event {
     TransferId transferId;
     BigDecimal amount;
     AccountId creditor;
+  }
+
+  @Value
+  class DebitFailed implements CommandRejection {
+    TransferId transferId;
+    String reason;
   }
 
   @Value

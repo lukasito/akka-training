@@ -25,7 +25,6 @@ import java.util.List;
 
 public class Account extends AbstractPersistentActor {
 
-  private AccountId accountId;
   private BigDecimal balance;
   private BigDecimal allocatedBalance;
   private final List<PendingTransfer> transfers = new ArrayList<>();
@@ -55,7 +54,6 @@ public class Account extends AbstractPersistentActor {
 
   private void initialize(Initialize initialize) {
     Initialized event = new Initialized(
-      initialize.accountId(),
       initialize.balance(),
       initialize.allocatedBalance()
     );
@@ -66,18 +64,18 @@ public class Account extends AbstractPersistentActor {
     BigDecimal amount = allocateMoney.amount();
     TransferId transferId = allocateMoney.transferId();
     if (availableBalance().compareTo(amount) >= 0) {
-      MoneyAllocated event = new MoneyAllocated(transferId, accountId, allocateMoney.creditor(), amount);
+      MoneyAllocated event = new MoneyAllocated(transferId, accountId(), allocateMoney.creditor(), amount);
       persist(event, this::accept);
       notify(event);
       log.info("Current state {}", createOverview());
     } else {
       // rejected
-      notify(new MoneyAllocationFailed(transferId, accountId, "Not enough balance!"));
+      notify(new MoneyAllocationFailed(transferId, accountId(), "Not enough balance!"));
     }
   }
 
   private void credit(Credit credit) {
-    CreditSuccessful event = new CreditSuccessful(credit.transferId(), credit.amount(), accountId);
+    CreditSuccessful event = new CreditSuccessful(credit.transferId(), credit.amount(), accountId());
     persist(event, this::accept);
     notify(event);
   }
@@ -124,9 +122,13 @@ public class Account extends AbstractPersistentActor {
 
   /*  PERSISTENCE & ES */
 
+  private AccountId accountId() {
+    return AccountId.of(persistenceId());
+  }
+
   @Override
   public String persistenceId() {
-    return accountId.value();
+    return self().path().name();
   }
 
   @Override
@@ -140,7 +142,6 @@ public class Account extends AbstractPersistentActor {
   }
 
   private void accept(Initialized initialized) {
-    accountId = initialized.accountId();
     balance = initialized.balance();
     allocatedBalance = initialized.allocatedBalance();
     getContext().become(ready());

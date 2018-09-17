@@ -1,5 +1,6 @@
 package com.wirecard.akkatraining.domain.transfer;
 
+import akka.actor.ActorRef;
 import com.wirecard.akkatraining.domain.account.AccountId;
 import lombok.Value;
 
@@ -26,6 +27,7 @@ public interface TransferProtocol {
     AccountId debtor;
     AccountId creditor;
     BigDecimal amount;
+    ActorRef requester;
   }
 
   @Value

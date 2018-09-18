@@ -4,6 +4,7 @@ import com.wirecard.akkatraining.domain.Confirmation;
 import com.wirecard.akkatraining.domain.transfer.TransferId;
 import lombok.Value;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 public interface AccountProtocol {
@@ -14,14 +15,15 @@ public interface AccountProtocol {
     }
   }
 
-  interface Event {
+  interface Event extends Serializable {
   }
 
   interface CommandRejection {
   }
 
   @Value
-  class Initialize implements Command {
+  class Create implements Command {
+    String accountName;
     BigDecimal balance;
     BigDecimal allocatedBalance;
   }
@@ -45,7 +47,8 @@ public interface AccountProtocol {
   }
 
   @Value
-  class Initialized implements Event {
+  class Created implements Event {
+    String accountName;
     BigDecimal balance;
     BigDecimal allocatedBalance;
   }

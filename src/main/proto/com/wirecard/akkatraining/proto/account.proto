@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package com.wirecard.akkatraining.proto;
 
-message Initialized {
+message Created {
   double balance = 1;
   double allocatedBalance = 2;
 }

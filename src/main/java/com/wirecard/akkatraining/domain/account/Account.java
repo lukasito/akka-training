@@ -9,14 +9,14 @@ import akka.persistence.SnapshotOffer;
 import com.wirecard.akkatraining.domain.Delivery;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.AccountOverview;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.AllocateMoney;
+import com.wirecard.akkatraining.domain.account.AccountProtocol.Create;
+import com.wirecard.akkatraining.domain.account.AccountProtocol.Created;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.Credit;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.CreditSuccessful;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.Debit;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.DebitFailed;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.DebitSuccessful;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.GetAccountOverview;
-import com.wirecard.akkatraining.domain.account.AccountProtocol.Initialize;
-import com.wirecard.akkatraining.domain.account.AccountProtocol.Initialized;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.MoneyAllocated;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.MoneyAllocationFailed;
 import com.wirecard.akkatraining.domain.transfer.TransferId;
@@ -41,7 +41,7 @@ public class Account extends AbstractPersistentActor {
   @Override
   public Receive createReceive() {
     return ReceiveBuilder.create()
-      .match(Initialize.class, this::initialize)
+      .match(Create.class, this::create)
       .matchAny(o -> log.error("Unknown message {}", o))
       .build();
   }
@@ -68,10 +68,11 @@ public class Account extends AbstractPersistentActor {
     }
   }
 
-  private void initialize(Initialize initialize) {
-    Initialized event = new Initialized(
-      initialize.balance(),
-      initialize.allocatedBalance()
+  private void create(Create create) {
+    Created event = new Created(
+      create.accountName(),
+      create.balance(),
+      create.allocatedBalance()
     );
     persist(event, this::accept);
   }
@@ -168,7 +169,7 @@ public class Account extends AbstractPersistentActor {
   @Override
   public Receive createReceiveRecover() {
     return ReceiveBuilder.create()
-      .match(Initialized.class, this::accept)
+      .match(Created.class, this::accept)
       .match(MoneyAllocated.class, this::accept)
       .match(CreditSuccessful.class, this::accept)
       .match(DebitSuccessful.class, this::accept)
@@ -184,11 +185,10 @@ public class Account extends AbstractPersistentActor {
     transfers.addAll(snapshot.transfers());
   }
 
-  private void accept(Initialized initialized) {
-    balance = initialized.balance();
-    allocatedBalance = initialized.allocatedBalance();
+  private void accept(Created created) {
+    balance = created.balance();
+    allocatedBalance = created.allocatedBalance();
     getContext().become(ready());
-    saveSnapshotIfNecessary();
   }
 
   private void accept(MoneyAllocated moneyAllocated) {

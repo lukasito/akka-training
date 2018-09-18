@@ -5,6 +5,7 @@ import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.japi.pf.ReceiveBuilder;
 import akka.persistence.AbstractPersistentActor;
+import akka.persistence.SnapshotOffer;
 import com.wirecard.akkatraining.domain.Delivery;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.AccountOverview;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.AllocateMoney;
@@ -25,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Account extends AbstractPersistentActor {
+
+  private static final int snapShotInterval = 100;
 
   private BigDecimal balance;
   private BigDecimal allocatedBalance;
@@ -156,6 +159,12 @@ public class Account extends AbstractPersistentActor {
     return self().path().name();
   }
 
+  private void saveSnapshotIfNecessary() {
+    if (lastSequenceNr() % snapShotInterval == 0 && lastSequenceNr() > 0) {
+      saveSnapshot(new AccountState(balance, allocatedBalance, transfers));
+    }
+  }
+
   @Override
   public Receive createReceiveRecover() {
     return ReceiveBuilder.create()
@@ -163,28 +172,41 @@ public class Account extends AbstractPersistentActor {
       .match(MoneyAllocated.class, this::accept)
       .match(CreditSuccessful.class, this::accept)
       .match(DebitSuccessful.class, this::accept)
+      .match(SnapshotOffer.class, this::accept)
       .build();
+  }
+
+  private void accept(SnapshotOffer snapshotOffer) {
+    AccountState snapshot = (AccountState) snapshotOffer.snapshot();
+    balance = snapshot.balance();
+    allocatedBalance = snapshot.allocatedBalance();
+    transfers.clear();
+    transfers.addAll(snapshot.transfers());
   }
 
   private void accept(Initialized initialized) {
     balance = initialized.balance();
     allocatedBalance = initialized.allocatedBalance();
     getContext().become(ready());
+    saveSnapshotIfNecessary();
   }
 
   private void accept(MoneyAllocated moneyAllocated) {
     BigDecimal amount = moneyAllocated.amount();
     allocateMoney(amount);
     transfers.add(new PendingTransfer(moneyAllocated.transferId(), amount, moneyAllocated.creditor()));
+    saveSnapshotIfNecessary();
   }
 
   private void accept(CreditSuccessful creditSuccessful) {
     balance = balance.add(creditSuccessful.amount());
+    saveSnapshotIfNecessary();
   }
 
   private void accept(DebitSuccessful debitSuccessful) {
     PendingTransfer pendingTransfer = debitSuccessful.pendingTransfer();
     transfers.remove(pendingTransfer);
     chargeMoney(pendingTransfer.amount());
+    saveSnapshotIfNecessary();
   }
 }

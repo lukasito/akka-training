@@ -70,6 +70,7 @@ public class Account extends AbstractPersistentActor {
 
   private void create(Create create) {
     Created event = new Created(
+      accountId(),
       create.accountName(),
       create.balance(),
       create.allocatedBalance()

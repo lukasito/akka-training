@@ -37,18 +37,19 @@ public class AccountProjection implements WithTimeOffsetFromDataSource {
 
   private void runStream() {
     journal.eventsByTag(AccountProtocol.Event.class.getName(), findOffset("account"))
+      .map(EventEnvelope::event)
+      .map(e -> (AccountProtocol.Event) e)
       .runWith(Sink.foreach(this::processEvent), materializer);
   }
 
   @SneakyThrows
-  private void processEvent(EventEnvelope eventEnvelope) {
-    Object event = eventEnvelope.event();
+  private void processEvent(AccountProtocol.Event event) {
     try (Connection c = dataSource.getConnection()) {
       if (event instanceof AccountProtocol.Created) {
         AccountProtocol.Created created = (AccountProtocol.Created) event;
         Timestamp now = Timestamp.from(Instant.now());
         PreparedStatement ps = c.prepareStatement(INSERT_ACCOUNT);
-        ps.setString(1, eventEnvelope.persistenceId());
+        ps.setString(1, created.accountId().value());
         ps.setString(2, created.accountName());
         ps.setBigDecimal(3, created.balance());
         ps.setBigDecimal(4, created.allocatedBalance());

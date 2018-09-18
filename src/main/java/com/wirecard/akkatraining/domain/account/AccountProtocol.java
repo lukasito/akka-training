@@ -48,6 +48,7 @@ public interface AccountProtocol {
 
   @Value
   class Created implements Event {
+    AccountId accountId;
     String accountName;
     BigDecimal balance;
     BigDecimal allocatedBalance;

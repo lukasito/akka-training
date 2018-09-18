@@ -1,6 +1,7 @@
 package com.wirecard.akkatraining.domain.transfer;
 
 import akka.actor.ActorRef;
+import com.wirecard.akkatraining.domain.Confirmation;
 import com.wirecard.akkatraining.domain.account.AccountId;
 import lombok.Value;
 
@@ -19,6 +20,17 @@ public interface TransferProtocol {
     BigDecimal amount;
     AccountId creditor;
     AccountId debtor;
+  }
+
+  @Value
+  class MessageSent implements Event {
+    Object message;
+  }
+
+  @Value
+  class MessageConfirmed implements Event, Confirmation {
+    long deliveryId;
+    ConfirmationType confirmationType;
   }
 
   @Value

@@ -5,6 +5,7 @@ import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.japi.pf.ReceiveBuilder;
 import akka.persistence.AbstractPersistentActor;
+import com.wirecard.akkatraining.domain.Delivery;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.AccountOverview;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.AllocateMoney;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.Credit;
@@ -44,12 +45,24 @@ public class Account extends AbstractPersistentActor {
 
   private Receive ready() {
     return ReceiveBuilder.create()
+      .match(Delivery.class, this::delivery)
       .match(AllocateMoney.class, this::allocateMoney)
       .match(Credit.class, this::credit)
       .match(Debit.class, this::debit)
       .matchEquals(GetAccountOverview.instance(), this::overview)
       .matchAny(o -> log.error("Unknown message {}", o))
       .build();
+  }
+
+  private void delivery(Delivery delivery) {
+    Object message = delivery.message();
+    if (message instanceof AllocateMoney) {
+      allocateMoney(delivery.deliveryId(), (AllocateMoney) message);
+    } else if (message instanceof Credit) {
+      credit(delivery.deliveryId(), (Credit) message);
+    } else if (message instanceof Debit) {
+      debit(delivery.deliveryId(), (Debit) message);
+    }
   }
 
   private void initialize(Initialize initialize) {
@@ -60,31 +73,43 @@ public class Account extends AbstractPersistentActor {
     persist(event, this::accept);
   }
 
-  private void allocateMoney(AllocateMoney allocateMoney) {
+  private void allocateMoney(long deliveryId, AllocateMoney allocateMoney) {
     BigDecimal amount = allocateMoney.amount();
     TransferId transferId = allocateMoney.transferId();
     if (availableBalance().compareTo(amount) >= 0) {
-      MoneyAllocated event = new MoneyAllocated(transferId, accountId(), allocateMoney.creditor(), amount);
+      MoneyAllocated event = new MoneyAllocated(deliveryId, transferId, accountId(), allocateMoney.creditor(), amount);
       persist(event, this::accept);
       notify(event);
       log.info("Current state {}", createOverview());
     } else {
       // rejected
-      notify(new MoneyAllocationFailed(transferId, accountId(), "Not enough balance!"));
+      notify(new MoneyAllocationFailed(deliveryId, transferId, accountId(), "Not enough balance!"));
     }
   }
 
+  private void allocateMoney(AllocateMoney allocateMoney) {
+    allocateMoney(0, allocateMoney);
+  }
+
   private void credit(Credit credit) {
-    CreditSuccessful event = new CreditSuccessful(credit.transferId(), credit.amount(), accountId());
+    credit(0, credit);
+  }
+
+  private void credit(long deliveryId, Credit credit) {
+    CreditSuccessful event = new CreditSuccessful(deliveryId, credit.transferId(), credit.amount(), accountId());
     persist(event, this::accept);
     notify(event);
   }
 
   private void debit(Debit debit) {
+    debit(0, debit);
+  }
+
+  private void debit(long deliveryId, Debit debit) {
     Object result = transfers.stream().filter(transfer -> transfer.id().equals(debit.transferId()))
       .findFirst()
       .map(transfer -> {
-        DebitSuccessful debitSuccessful = new DebitSuccessful(transfer);
+        DebitSuccessful debitSuccessful = new DebitSuccessful(deliveryId, transfer);
         persist(debitSuccessful, this::accept);
         return (Object) debitSuccessful;
       })

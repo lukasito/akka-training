@@ -1,5 +1,6 @@
 package com.wirecard.akkatraining.domain.account;
 
+import com.wirecard.akkatraining.domain.Confirmation;
 import com.wirecard.akkatraining.domain.transfer.TransferId;
 import lombok.Value;
 
@@ -8,6 +9,9 @@ import java.math.BigDecimal;
 public interface AccountProtocol {
 
   interface Command {
+    default AccountRepositoryProtocol.Forward forwardTo(AccountId id) {
+      return new AccountRepositoryProtocol.Forward(id, this);
+    }
   }
 
   interface Event {
@@ -47,7 +51,8 @@ public interface AccountProtocol {
   }
 
   @Value
-  class MoneyAllocated implements Event {
+  class MoneyAllocated implements Event, Confirmation {
+    long deliveryId;
     TransferId transferId;
     AccountId debtor;
     AccountId creditor;
@@ -55,12 +60,14 @@ public interface AccountProtocol {
   }
 
   @Value
-  class DebitSuccessful implements Event {
+  class DebitSuccessful implements Event, Confirmation {
+    long deliveryId;
     PendingTransfer pendingTransfer;
   }
 
   @Value
-  class CreditSuccessful implements Event {
+  class CreditSuccessful implements Event, Confirmation {
+    long deliveryId;
     TransferId transferId;
     BigDecimal amount;
     AccountId creditor;
@@ -73,7 +80,8 @@ public interface AccountProtocol {
   }
 
   @Value
-  class MoneyAllocationFailed implements CommandRejection {
+  class MoneyAllocationFailed implements CommandRejection, Confirmation {
+    long deliveryId;
     TransferId transferId;
     AccountId debtor;
     String reason;

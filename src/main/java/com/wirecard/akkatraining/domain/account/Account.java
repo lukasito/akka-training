@@ -20,6 +20,7 @@ import com.wirecard.akkatraining.domain.account.AccountProtocol.GetAccountOvervi
 import com.wirecard.akkatraining.domain.account.AccountProtocol.MoneyAllocated;
 import com.wirecard.akkatraining.domain.account.AccountProtocol.MoneyAllocationFailed;
 import com.wirecard.akkatraining.domain.transfer.TransferId;
+import lombok.SneakyThrows;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -110,7 +111,9 @@ public class Account extends AbstractPersistentActor {
     debit(0, debit);
   }
 
+  @SneakyThrows
   private void debit(long deliveryId, Debit debit) {
+    Thread.sleep(2_000);
     Object result = transfers.stream().filter(transfer -> transfer.transferId().equals(debit.transferId()))
       .findFirst()
       .map(transfer -> {

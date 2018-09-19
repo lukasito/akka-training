@@ -42,12 +42,19 @@ public class Main {
 
     transfer.tell(new TransferProtocol.ExecuteTransfer(BigDecimal.ONE, creditor, debtor), ActorRef.noSender());
 
-    Thread.sleep(10_000);
+    Thread.sleep(1_000);
     Account account1 = viewRepository.find(debtor);
     Account account2 = viewRepository.find(creditor);
 
-    log.info("Projection of debtor: {}", account1);
-    log.info("Projection of creditor: {}", account2);
+    log.info("First projection of debtor: {}", account1);
+    log.info("First projection of creditor: {}", account2);
+
+    Thread.sleep(5_000);
+    account1 = viewRepository.find(debtor);
+    account2 = viewRepository.find(creditor);
+
+    log.info("Second projection of debtor: {}", account1);
+    log.info("Second projection of creditor: {}", account2);
   }
 
   private static AccountViewRepository startProjecting(ActorSystem actorSystem) {

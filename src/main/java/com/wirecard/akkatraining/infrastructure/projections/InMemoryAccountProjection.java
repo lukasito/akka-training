@@ -10,6 +10,7 @@ import akka.stream.Materializer;
 import akka.stream.javadsl.Sink;
 import com.wirecard.akkatraining.domain.account.AccountProtocol;
 import com.wirecard.akkatraining.domain.account.PendingTransfer;
+import com.wirecard.akkatraining.domain.transfer.TransferId;
 import com.wirecard.akkatraining.domain.view.Account;
 import com.wirecard.akkatraining.infrastructure.repository.InMemoryAccountViewViewRepository;
 import lombok.SneakyThrows;
@@ -65,10 +66,13 @@ public class InMemoryAccountProjection {
     PendingTransfer pendingTransfer = new PendingTransfer(event.transferId(), event.amount(), event.creditor());
     Account account = accountRepository.find(event.debtor());
     account.addPendingTransfer(pendingTransfer);
+    log.info("Added pending transfer: {}", pendingTransfer);
   }
 
   private void removePendingTransfer(AccountProtocol.DebitSuccessful ds) {
     Account account = accountRepository.find(ds.debtor());
-    account.removePendingTransfer(ds.pendingTransfer().transferId());
+    TransferId transferId = ds.pendingTransfer().transferId();
+    account.removePendingTransfer(transferId);
+    log.info("Pending transfer removed: {}", transferId);
   }
 }

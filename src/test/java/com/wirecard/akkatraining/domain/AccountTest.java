@@ -37,8 +37,8 @@ public class AccountTest extends AbstractActorSystemTest {
     AccountId debtor = AccountId.of("Account-123456");
     AccountId creditor = AccountId.of("Account-23133");
 
-    accountRepository.tell(new Save(debtor, BigDecimal.TEN, BigDecimal.ZERO), noSender());
-    accountRepository.tell(new Save(creditor, BigDecimal.ONE, BigDecimal.ZERO), noSender());
+    accountRepository.tell(new Save("debtors-account", debtor, BigDecimal.TEN, BigDecimal.ZERO), noSender());
+    accountRepository.tell(new Save("creditors-account",creditor, BigDecimal.ONE, BigDecimal.ZERO), noSender());
 
     ActorRef transfer = newTransfer();
 
@@ -57,8 +57,8 @@ public class AccountTest extends AbstractActorSystemTest {
     AccountId debtor = AccountId.of("Account-123456");
     AccountId creditor = AccountId.of("Account-23133");
 
-    accountRepository.tell(new Save(debtor, BigDecimal.TEN, new BigDecimal("6")), noSender());
-    accountRepository.tell(new Save(creditor, BigDecimal.ONE, BigDecimal.ZERO), noSender());
+    accountRepository.tell(new Save("debtors-account",debtor, BigDecimal.TEN, new BigDecimal("6")), noSender());
+    accountRepository.tell(new Save("creditors-account", creditor, BigDecimal.ONE, BigDecimal.ZERO), noSender());
 
     ActorRef transfer = newTransfer();
 

@@ -27,7 +27,7 @@ public class InMemoryAccountRepository extends AbstractLoggingActor {
 
     context()
       .actorOf(Account.props(), accountId.value())
-      .tell(new AccountProtocol.Create(save.balance(), save.allocatedBalance()), self());
+      .tell(new AccountProtocol.Create(save.accountName(), save.balance(), save.allocatedBalance()), self());
   }
 
   private void forward(AccountRepositoryProtocol.Forward msg) {

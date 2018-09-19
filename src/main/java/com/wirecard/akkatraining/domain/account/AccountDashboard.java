@@ -15,7 +15,7 @@ public class AccountDashboard {
   List<Turnover> turnovers;
   List<PendingTransfer> pendingTransfers;
 
-  public BigDecimal pendingTransferSum() {
+  public BigDecimal allocatedBalance() {
     return pendingTransfers.stream()
       .map(PendingTransfer::amount)
       .reduce(BigDecimal.ZERO, BigDecimal::add)

@@ -114,7 +114,7 @@ public class Account extends AbstractPersistentActor {
     Object result = transfers.stream().filter(transfer -> transfer.id().equals(debit.transferId()))
       .findFirst()
       .map(transfer -> {
-        DebitSuccessful debitSuccessful = new DebitSuccessful(deliveryId, transfer);
+        DebitSuccessful debitSuccessful = new DebitSuccessful(deliveryId, accountId(), transfer);
         persist(debitSuccessful, this::accept);
         return (Object) debitSuccessful;
       })

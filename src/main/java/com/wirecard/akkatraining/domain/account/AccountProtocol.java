@@ -66,6 +66,7 @@ public interface AccountProtocol {
   @Value
   class DebitSuccessful implements Event, Confirmation {
     long deliveryId;
+    AccountId debtor;
     PendingTransfer pendingTransfer;
   }
 

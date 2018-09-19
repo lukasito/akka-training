@@ -5,6 +5,7 @@ import com.wirecard.akkatraining.domain.Confirmation;
 import com.wirecard.akkatraining.domain.account.AccountId;
 import lombok.Value;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 public interface TransferProtocol {
@@ -12,7 +13,7 @@ public interface TransferProtocol {
   interface Command {
   }
 
-  interface Event {
+  interface Event extends Serializable {
   }
 
   @Value

@@ -21,8 +21,8 @@ public class Main {
 
     AccountId debtor = AccountId.of("Account-1");
     AccountId creditor = AccountId.of("Account-2");
-    Save acc1 = new Save(debtor, BigDecimal.TEN, BigDecimal.ZERO);
-    Save acc2 = new Save(creditor, BigDecimal.ONE, BigDecimal.ZERO);
+    Save acc1 = new Save("debtors-account", debtor, BigDecimal.TEN, BigDecimal.ZERO);
+    Save acc2 = new Save("creditors-account", creditor, BigDecimal.ONE, BigDecimal.ZERO);
 
     accountRepository.tell(acc1, ActorRef.noSender());
     accountRepository.tell(acc2, ActorRef.noSender());

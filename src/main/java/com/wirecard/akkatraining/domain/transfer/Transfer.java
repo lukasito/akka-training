@@ -69,12 +69,11 @@ public class Transfer extends AbstractPersistentActorWithAtLeastOnceDelivery {
     persist(event, e -> {
       onTransferInitiated(e);
       notifyRequester(event);
+      persist(
+        new MessageSent(
+          new AccountProtocol.AllocateMoney(transferId(), executeTransfer.creditor(), executeTransfer.amount())),
+        this::onMessageSent);
     });
-
-    persist(
-      new MessageSent(
-        new AccountProtocol.AllocateMoney(transferId(), creditor, amount)),
-      this::onMessageSent);
   }
 
   private void moneyAllocated(AccountProtocol.MoneyAllocated moneyAllocated) {
@@ -84,7 +83,7 @@ public class Transfer extends AbstractPersistentActorWithAtLeastOnceDelivery {
 
     persist(
       new MessageSent(
-        new AccountProtocol.Credit(transferId(), amount)),
+        new AccountProtocol.Credit(transferId(), moneyAllocated.amount())),
       this::onMessageSent);
 
     persist(
@@ -113,34 +112,38 @@ public class Transfer extends AbstractPersistentActorWithAtLeastOnceDelivery {
   private void creditSuccessful(AccountProtocol.CreditSuccessful creditSuccessful) {
     persist(
       new MessageConfirmed(creditSuccessful.deliveryId(), ConfirmationType.CREDIT),
-      this::onMessageConfirmed
-    );
+      mc -> {
+        onMessageConfirmed(mc);
+        if (creditCompleted && debitCompleted) {
+          persist(
+            new TransferCompleted(transferId(), debtor, creditor, amount),
+            tc -> {
+              onTransferCompleted(tc);
+              notifyRequester(tc);
+            });
+        }
 
-    if (creditCompleted && debitCompleted) {
-      persist(
-        new TransferCompleted(transferId(), debtor, creditor, amount),
-        e -> {
-          onTransferCompleted(e);
-          notifyRequester(e);
-        });
-    }
+      }
+    );
     log.info("Credit successful, status: {}", status);
   }
 
   private void debitSuccessful(AccountProtocol.DebitSuccessful debitSuccessful) {
     persist(
       new MessageConfirmed(debitSuccessful.deliveryId(), ConfirmationType.DEBIT),
-      this::onMessageConfirmed
+      mc -> {
+        onMessageConfirmed(mc);
+        if (creditCompleted && debitCompleted) {
+          persist(
+            new TransferCompleted(transferId(), debtor, creditor, amount),
+            tc -> {
+              onTransferCompleted(tc);
+              notifyRequester(tc);
+            });
+        }
+      }
     );
 
-    if (creditCompleted && debitCompleted) {
-      persist(
-        new TransferCompleted(transferId(), debtor, creditor, amount),
-        e -> {
-          onTransferCompleted(e);
-          notifyRequester(e);
-        });
-    }
     log.info("Debit successful, status: {}", status);
   }
 

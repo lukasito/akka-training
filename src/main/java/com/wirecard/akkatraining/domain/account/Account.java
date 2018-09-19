@@ -111,7 +111,7 @@ public class Account extends AbstractPersistentActor {
   }
 
   private void debit(long deliveryId, Debit debit) {
-    Object result = transfers.stream().filter(transfer -> transfer.id().equals(debit.transferId()))
+    Object result = transfers.stream().filter(transfer -> transfer.transferId().equals(debit.transferId()))
       .findFirst()
       .map(transfer -> {
         DebitSuccessful debitSuccessful = new DebitSuccessful(deliveryId, accountId(), transfer);

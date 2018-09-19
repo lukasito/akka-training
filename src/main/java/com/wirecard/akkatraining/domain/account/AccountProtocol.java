@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 
 public interface AccountProtocol {
 
-  interface Command {
+  interface Command extends Serializable {
     default AccountRepositoryProtocol.Forward forwardTo(AccountId id) {
       return new AccountRepositoryProtocol.Forward(id, this);
     }

@@ -1,4 +1,4 @@
-package com.wirecard.akkatraining.infrastructure;
+package com.wirecard.akkatraining.infrastructure.repository;
 
 import akka.actor.AbstractLoggingActor;
 import akka.actor.Props;

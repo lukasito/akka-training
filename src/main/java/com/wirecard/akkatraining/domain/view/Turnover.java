@@ -1,15 +1,14 @@
-package com.wirecard.akkatraining.domain.account;
+package com.wirecard.akkatraining.domain.view;
 
+import com.wirecard.akkatraining.domain.account.AccountId;
 import lombok.Value;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Value
 public class Turnover {
 
-  int sigNum;
+  AccountId owner;
   BigDecimal amount;
   AccountId reference;
-  LocalDateTime occurredOn;
 }

@@ -12,7 +12,7 @@ import com.wirecard.akkatraining.domain.transfer.TransferProtocol.ExecuteTransfe
 import com.wirecard.akkatraining.domain.transfer.TransferProtocol.TransferCompleted;
 import com.wirecard.akkatraining.domain.transfer.TransferProtocol.TransferFailed;
 import com.wirecard.akkatraining.domain.transfer.TransferProtocol.TransferInitiated;
-import com.wirecard.akkatraining.infrastructure.InMemoryAccountRepository;
+import com.wirecard.akkatraining.infrastructure.repository.InMemoryAccountRepository;
 import org.junit.Test;
 
 import java.math.BigDecimal;

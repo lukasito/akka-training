@@ -12,3 +12,5 @@ out/
 !gradle-wrapper.jar
 
 *.iml
+
+journal

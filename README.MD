@@ -8,7 +8,16 @@ File ->
         Annotation processors: Enable annotation processing
 ```
 
+# Cleaning level db journal/snapshots 
+```
+gradlew clean
+```
+or more specific
+```
+gradlew leveldbCleanup
+```
+
 # Running
 ```
-gradlew run
+gradlew [clean] run
 ```

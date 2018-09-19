@@ -47,3 +47,9 @@ dependencies {
 wrapper {
   gradleVersion = "4.10"
 }
+
+task leveldbCleanup(type: Delete) {
+    delete 'journal', 'snapshots'
+}
+
+clean.dependsOn(leveldbCleanup)

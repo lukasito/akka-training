@@ -1,24 +1,29 @@
 package com.wirecard.akkatraining.domain.account;
 
+import com.wirecard.akkatraining.domain.Confirmation;
 import com.wirecard.akkatraining.domain.transfer.TransferId;
 import lombok.Value;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 public interface AccountProtocol {
 
-  interface Command {
+  interface Command extends Serializable {
+    default AccountRepositoryProtocol.Forward forwardTo(AccountId id) {
+      return new AccountRepositoryProtocol.Forward(id, this);
+    }
   }
 
-  interface Event {
+  interface Event extends Serializable {
   }
 
   interface CommandRejection {
   }
 
   @Value
-  class Initialize {
-    AccountId accountId;
+  class Create implements Command {
+    String accountName;
     BigDecimal balance;
     BigDecimal allocatedBalance;
   }
@@ -42,14 +47,16 @@ public interface AccountProtocol {
   }
 
   @Value
-  class Initialized implements Event {
+  class Created implements Event {
     AccountId accountId;
+    String accountName;
     BigDecimal balance;
     BigDecimal allocatedBalance;
   }
 
   @Value
-  class MoneyAllocated implements Event {
+  class MoneyAllocated implements Event, Confirmation {
+    long deliveryId;
     TransferId transferId;
     AccountId debtor;
     AccountId creditor;
@@ -57,8 +64,18 @@ public interface AccountProtocol {
   }
 
   @Value
-  class DebitSuccessful implements Event {
+  class DebitSuccessful implements Event, Confirmation {
+    long deliveryId;
+    AccountId debtor;
     PendingTransfer pendingTransfer;
+  }
+
+  @Value
+  class CreditSuccessful implements Event, Confirmation {
+    long deliveryId;
+    TransferId transferId;
+    BigDecimal amount;
+    AccountId creditor;
   }
 
   @Value
@@ -68,14 +85,8 @@ public interface AccountProtocol {
   }
 
   @Value
-  class CreditSuccessful implements Event {
-    TransferId transferId;
-    BigDecimal amount;
-    AccountId creditor;
-  }
-
-  @Value
-  class MoneyAllocationFailed implements CommandRejection {
+  class MoneyAllocationFailed implements CommandRejection, Confirmation {
+    long deliveryId;
     TransferId transferId;
     AccountId debtor;
     String reason;

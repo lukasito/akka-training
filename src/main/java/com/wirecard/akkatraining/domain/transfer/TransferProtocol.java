@@ -1,8 +1,11 @@
 package com.wirecard.akkatraining.domain.transfer;
 
+import akka.actor.ActorRef;
+import com.wirecard.akkatraining.domain.Confirmation;
 import com.wirecard.akkatraining.domain.account.AccountId;
 import lombok.Value;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 public interface TransferProtocol {
@@ -10,7 +13,7 @@ public interface TransferProtocol {
   interface Command {
   }
 
-  interface Event {
+  interface Event extends Serializable {
   }
 
   @Value
@@ -21,11 +24,23 @@ public interface TransferProtocol {
   }
 
   @Value
+  class MessageSent implements Event {
+    Object message;
+  }
+
+  @Value
+  class MessageConfirmed implements Event, Confirmation {
+    long deliveryId;
+    ConfirmationType confirmationType;
+  }
+
+  @Value
   class TransferInitiated implements Event {
     TransferId transferId;
     AccountId debtor;
     AccountId creditor;
     BigDecimal amount;
+    ActorRef requester;
   }
 
   @Value

@@ -14,6 +14,7 @@ public interface AccountRepositoryProtocol {
 
   @Value
   class Save {
+    String accountName;
     AccountId accountId;
     BigDecimal balance;
     BigDecimal allocatedBalance;
